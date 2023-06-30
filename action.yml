@@ -42,11 +42,12 @@ runs:
         git config user.name "${GITHUB_ACTOR}"
         git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
         env bundle install
-        bundle exec rubocop --autocorrect-all
+        bundle exec rubocop --autocorrect-all --fail-level F
         git add -u
         git commit -m "rubocop --autocorrect-all"
         git push
       if: github.event.label.name == inputs.triggered_label_autocorrect_all
+      continue-on-error: true
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
@@ -57,11 +58,12 @@ runs:
         git config user.name "${GITHUB_ACTOR}"
         git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
         env bundle install
-        bundle exec rubocop --autocorrect
+        bundle exec rubocop --autocorrect --fail-level F
         git add -u
         git commit -m "rubocop --autocorrect"
         git push
       if: github.event.label.name == inputs.triggered_label_autocorrect
+      continue-on-error: true
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
