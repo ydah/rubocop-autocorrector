@@ -1,0 +1,77 @@
+name: rubocop-autocorrector
+author: ydah <t.yudai92@gmail.com>
+description: Custom action to autocorrect rubocop offenses.
+branding:
+  color: red
+  icon: git-pull-request
+inputs:
+  github_token:
+    description: GitHub access token to run another workflows from new pull request.
+    required: false
+  triggered_label_autocorrect_all:
+    description: Specify the label to be triggered (rubocop --autocorrect-all).
+    required: false
+    default: "rubocop-autocorrect-all"
+  triggered_label_autocorrect:
+    description: Specify the label to be triggered (rubocop autocorrect).
+    required: false
+    default: "rubocop-autocorrect"
+  preparation_command:
+    description: Preparation commands to be plugged in after the repository is checked out and Ruby is set up.
+    required: false
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - name: Checking out repository
+      if: github.event.label.name == inputs.triggered_label_autocorrect_all || github.event.label.name == inputs.triggered_label_autocorrect
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ github.head_ref }}
+    - name: Setup Ruby
+      if: github.event.label.name == inputs.triggered_label_autocorrect_all || github.event.label.name == inputs.triggered_label_autocorrect
+      uses: ruby/setup-ruby@v1
+    - name: Run preparation command
+      run: ${{ inputs.preparation_command }}
+      if: github.event.label.name == inputs.triggered_label_autocorrect_all || github.event.label.name == inputs.triggered_label_autocorrect
+      shell: bash
+    - name: Run rubocop-autocorrect-all command
+      run: |
+        gem update --system
+        gem update bundler
+        git config user.name "${GITHUB_ACTOR}"
+        git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+        env bundle install
+        bundle exec rubocop --autocorrect-all
+        git add -u
+        git commit -m "rubocop --autocorrect-all"
+        git push
+      if: github.event.label.name == inputs.triggered_label_autocorrect_all
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
+    - name: Run rubocop-autocorrect command
+      run: |
+        gem update --system
+        gem update bundler
+        git config user.name "${GITHUB_ACTOR}"
+        git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+        env bundle install
+        bundle exec rubocop --autocorrect
+        git add -u
+        git commit -m "rubocop --autocorrect"
+        git push
+      if: github.event.label.name == inputs.triggered_label_autocorrect
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
+    - name: Post-processing for rubocop-autocorrect-all
+      uses: actions-ecosystem/action-remove-labels@v1
+      if: github.event.label.name == inputs.triggered_label_autocorrect_all
+      with:
+        labels: ${{ inputs.triggered_label_autocorrect_all }}
+    - name: Post-processing for rubocop-autocorrect
+      uses: actions-ecosystem/action-remove-labels@v1
+      if: github.event.label.name == inputs.triggered_label_autocorrect
+      with:
+        labels: ${{ inputs.triggered_label_autocorrect }}
